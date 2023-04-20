@@ -1,6 +1,0 @@
-config_file_path = "config.json"
-base_folder_id="0"
-admin_id = "23539671305"
-start_window="2023-02-09T01:45:05-05:00"
-end_window="2023-02-10T00:28:05-05:00"
-user_to_query="rduchin@boxdemo.com"
