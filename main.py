@@ -1,4 +1,6 @@
 from models.box import BoxAPI
+from models.logger import Logger
+from create import initiate_cli
 import json 
 from datetime import datetime, timezone
 import csv
@@ -9,10 +11,9 @@ from json import JSONEncoder
 from utils.helpers import write_json_file, read_json_file, get_date_object, get_date_string
 from utils.box_helpers import filter_user_events, get_event_type
 from boxsdk.exception import BoxAPIException
-
 import rfc3339      # for date object -> date string
 import iso8601      # for date string -> date object
-
+import colored
 
 # Load environment variables
 load_dotenv()

@@ -105,7 +105,7 @@ def get_cli_args():
 
     return args
  
-def path_is_safe(directory):
+def path_is_safe(directory=SAMPLE_FILE_DIR):
     for root, dirs, files in os.walk(directory):
         if "test_files" in root:
             return True
@@ -128,7 +128,7 @@ def decrypt_file(filename, key):
     with open(filename, 'wb') as f:
         f.write(decrypted)
 
-def encrypt_directory_files(directory, key):
+def encrypt_directory_files(key,directory=SAMPLE_FILE_DIR):
     if path_is_safe(directory):
         for root, dirs, files in os.walk(directory):
             for file in files:
@@ -144,7 +144,7 @@ def encrypt_directory_files(directory, key):
                     except Exception as e:
                         print(f'Failed to encrypt file: {filepath}, {e}')
                
-def decrypt_directory_files(directory,key):
+def decrypt_directory_files(key,directory=SAMPLE_FILE_DIR):
     if path_is_safe(directory):
         for root, dirs, files in os.walk(directory):
             for file in files:

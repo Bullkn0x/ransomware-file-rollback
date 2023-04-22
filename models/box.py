@@ -5,59 +5,7 @@ from boxsdk.object.events import EnterpriseEventsStreamType
 import os
 import json
 import logging 
-
-class Logger:
-    """
-    A class for creating logger instances.
-
-    Attributes:
-    - name (str): The name of the logger instance.
-    - level (int): The logging level for the logger instance.
-
-    Methods:
-    - get_logger(): Returns the logger instance.
-    - get_error_logger(): Returns the error logger instance.
-    """
-    def __init__(self, name, level=logging.INFO):
-        # Create a logger instance with the provided name and logging level
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        
-        # Set up formatter for log messages
-        formatter = logging.Formatter('%(levelname)s:%(name)s:%(funcName)s:%(message)s')
-
-        # Set up file handler for writing log messages to a file
-        file_handler = logging.FileHandler(f'logs/{name}.log')
-        file_handler.setFormatter(formatter)
-
-        # Set up stream handler for writing log messages to the console
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(formatter)
-
-        # Add the file handler and stream handler to the logger instance
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(stream_handler)
-
-        # Set up an error logger instance
-        self.error_logger = logging.getLogger(f'{name}_errors')
-        self.error_logger.setLevel(logging.ERROR)
-
-        # Set up formatter for error messages
-        error_formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(message)s')
-
-        # Set up file handler for writing error messages to a file
-        error_file_handler = logging.FileHandler(f'logs/{name}_errors.log')
-        error_file_handler.setFormatter(error_formatter)
-        
-        # Add the file handler to the error logger instance
-        self.error_logger.addHandler(error_file_handler)
-
-
-    def get_logger(self):
-        return self.logger
-
-    def get_error_logger(self):
-        return self.error_logger
+from models.logger import Logger
 
 class BoxAPI(Logger):
     def __init__(self, config_path, admin_id):
@@ -271,3 +219,46 @@ class BoxAPI(Logger):
         # print(f'File ID restored is {restored_file.id} and name is {restored_file.name}')
         return restored_file
         
+
+
+    
+
+    ##### THIS NEEDS TO BE CLEANED UP
+    def promote_closest_version(self, file_id, ransomware_start_date):
+        """
+        Promotes the closest previous version of the specified Box file based on the provided ransomware start date.
+
+        Args:
+        - file_id (str): The ID of the Box file to promote the closest previous version for.
+        - ransomware_start_date (str): The start time (in ISO format) for the ransomware attack.
+
+        Returns:
+        - None
+        """
+        if not self.sa_client:
+            self.logger.error('Box API client not initialized. promote_closest_version() stopped')
+            return
+
+      
+        # Get closest previous version of the file
+        closest_version_id = None
+        lowest_found_time_diff = float('inf')
+        with open('result.json') as json_file:
+            compromised_files = json.load(json_file)
+            file_details = compromised_files.get(file_id, {})
+            previous_versions = file_details.get('previous_versions', [])
+            for version in previous_versions:
+                date_version_timestamp = get_date_object(version['created_at'])
+                version_diff_from_attack = (ransomware_start_date - date_version_timestamp).total_seconds()
+                if version_diff_from_attack < lowest_found_time_diff:
+                    lowest_found_time_diff = version_diff_from_attack
+                    closest_version_id = version['version_id']
+
+            # Promote closest previous version
+            if closest_version_id:
+                version_to_promote = self.sa_client.file_version(closest_version_id)
+                new_version = user_client.file(file_id).promote_version(version_to_promote)
+                self.logger.info(f'File: {file_details.get("item_name")} | Closest Version: {closest_version_id} | Time Difference: {lowest_found_time_diff}s | Version {closest_version_id} promoted; new version {new_version.id} created')
+            else:
+                self.logger.warning(f'No previous versions found for file ID {file_id}')
+                return
