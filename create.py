@@ -3,11 +3,20 @@ from dotenv import load_dotenv
 import os
 import colored
 from cryptography.fernet import Fernet
+from utils.helpers import generate_key
 
 load_dotenv()
 SAMPLE_FILE_DIR = os.environ.get('sample_file_directory')
-SECRET = os.environ.get('SECRET_KEY').encode('utf-8')
-print(SECRET)
+SECRET = os.environ.get('SECRET_KEY')
+if not SECRET:
+    try:
+        key = generate_key()
+        print("Generated new key and saved to .env")
+    except Exception as e:
+        print("Error generating new key:", e)
+else:
+    key = SECRET.encode('utf-8')
+
 def initiate_cli():
     
     # Parse the command line arguments using the argparse module
@@ -23,10 +32,10 @@ def initiate_cli():
 
         if args.encrypt:
             if path_is_safe(args.directory):
-                encrypt_directory_files(SECRET,args.directory)
+                encrypt_directory_files(key, args.directory)
         if args.decrypt:
             if path_is_safe(args.directory):
-                decrypt_directory_files(SECRET,args.directory)
+                decrypt_directory_files(key, args.directory)
 
 
 

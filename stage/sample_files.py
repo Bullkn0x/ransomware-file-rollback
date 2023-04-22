@@ -10,7 +10,6 @@ from colored import fg, bg, attr
 load_dotenv()
 
 SAMPLE_FILE_DIR = os.environ.get('sample_file_directory')
-SECRET = os.environ.get('SECRET_KEY').encode('utf-8')
 
 def create_sample_files(num_files, directory=SAMPLE_FILE_DIR):
     """

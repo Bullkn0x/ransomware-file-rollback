@@ -2,6 +2,7 @@ import json
 import datetime as dt
 import rfc3339      # for date object -> date string
 import iso8601      # for date string -> date object
+from cryptography.fernet import Fernet
 
 def read_json_file(filepath):
     """
@@ -51,3 +52,9 @@ def get_date_object(date_string):
 
 def get_date_string(date_object):
   return rfc3339.rfc3339(date_object)
+
+def generate_key():
+    key = Fernet.generate_key()
+    with open(".env", "a") as f:
+        f.write(f'\nSECRET_KEY="{key.decode("utf-8")}"')
+    return key
