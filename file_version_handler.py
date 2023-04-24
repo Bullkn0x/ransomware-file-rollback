@@ -54,9 +54,10 @@ def main():
     #FILE VERSION FIND PREVIOUS
     ransomware_start_date = get_date_object(START_TIME_WINDOW)
 
-    with open('result.json') as json_file:
+    with open('outputs/user_file_events.json') as json_file:
         compromised_files = json.load(json_file)
-        for file_id, file_details in compromised_files.items():
+        for file_details in compromised_files:
+            file_id = file_details['file_id']
             lowest_found_time_diff = float('inf')
             closest_version_id = None
             previous_versions = file_details['previous_versions']

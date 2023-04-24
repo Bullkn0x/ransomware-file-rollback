@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 from json import JSONEncoder
  
 
+from models.box import BoxAPI
+
 
 # Load vars from env
 load_dotenv()
@@ -27,12 +29,13 @@ def main():
     if not os.path.exists(config_path):
         print('no config.json file present, try again')
 
-    app_config =load_config(config_path)
+    # app_config =load_config(config_path)
 
-    # Setup authorization using config.json file
-    auth = JWTAuth.from_settings_dictionary(app_config)
-    auth.authenticate_instance()
-
+    # # Setup authorization using config.json file
+    # auth = JWTAuth.from_settings_dictionary(app_config)
+    # auth.authenticate_instance()
+    app_config=load_config(config_path)
+    sa_client = BoxAPI(app_config)
 
     # Create Box API client
     sa_client = Client(auth)

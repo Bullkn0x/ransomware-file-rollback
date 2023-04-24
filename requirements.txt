@@ -1,0 +1,7 @@
+boxsdk==3.7.1
+boxsdk[jwt]
+cryptography==40.0.2
+iso8601==1.1.0
+python-dotenv==1.0.0
+rfc3339==6.2
+colored
