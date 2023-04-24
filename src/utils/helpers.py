@@ -5,8 +5,8 @@ import iso8601      # for date string -> date object
 from cryptography.fernet import Fernet
 import os
 import argparse
-from utils.prompt import *
-from create import create_sample_files, update_sample_files, encrypt_directory_files, decrypt_directory_files
+from .prompt import *
+from ..create import create_sample_files, update_sample_files, encrypt_directory_files, decrypt_directory_files
 
 BOX_SAMPLE_FILE_DIR = os.environ.get('box_drive_sample_file_directory')
 LOCAL_SAMPLE_FILE_DIR = os.environ.get('local_sample_file_directory')
@@ -111,7 +111,8 @@ def get_cli_args():
     parser.add_argument("-dir", "--directory", metavar="path", default=LOCAL_SAMPLE_FILE_DIR, help="the directory where the sample files will be created or updated (default: current directory)")
     parser.add_argument("-w", "--wizard", metavar="wizard", help="If no arguments are present and the user would like to use an interactive CLI to service commands")
     parser.add_argument("--app_user_prefix", metavar="prefix", default="", help="a prefix string to be attached to app users")
-
+    parser.add_argument("--web", action="store_true", help="launches the web server to interact with the gui")
+    
     args = parser.parse_args()
     
 

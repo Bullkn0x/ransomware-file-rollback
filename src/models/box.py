@@ -3,7 +3,7 @@ from boxsdk import JWTAuth
 from boxsdk.exception import BoxAPIException
 from boxsdk.object.events import EnterpriseEventsStreamType
 from boxsdk.object.collaboration import CollaborationRole
-from models.logger import Logger
+from .logger import Logger
 from concurrent.futures import ThreadPoolExecutor
 import os
 import json

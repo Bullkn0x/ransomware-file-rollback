@@ -1,13 +1,12 @@
 from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, emit
 import json
-from stage.sample_files import (
-    create_sample_files,
+from src.create import (
     create_sample_file,
-    update_sample_files,
-    path_is_safe,
-    encrypt_directory_files,
-    decrypt_directory_files,
+    create_sample_files, 
+    update_sample_files, 
+    encrypt_directory_files, 
+    decrypt_directory_files
 )
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet

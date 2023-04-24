@@ -1,5 +1,8 @@
-from models.box import BoxAPI
-from models.logger import Logger
+from .models.box import BoxAPI
+from .models.logger import Logger
+from .utils.helpers import write_json_file, read_json_file, get_date_object, get_date_string,get_sample_directory_file_paths, get_cli_args, process_args
+from .utils.box_helpers import filter_user_events, get_event_type
+from web.app import app, socketio
 import json 
 from datetime import datetime, timezone
 import csv
@@ -7,8 +10,6 @@ import json
 import os
 from dotenv import load_dotenv
 from json import JSONEncoder
-from utils.helpers import write_json_file, read_json_file, get_date_object, get_date_string,get_sample_directory_file_paths, get_cli_args, process_args
-from utils.box_helpers import filter_user_events, get_event_type
 from boxsdk.exception import BoxAPIException
 import rfc3339      # for date object -> date string
 import iso8601      # for date string -> date object
@@ -36,6 +37,10 @@ def main():
     
 
     args = get_cli_args()
+    if args.web:
+        socketio.run(app,host='127.0.0.1',port="8000",debug=True)
+
+
     process_args(args)
     # initiate_cli()
     
