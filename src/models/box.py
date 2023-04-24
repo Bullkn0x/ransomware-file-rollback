@@ -3,11 +3,14 @@ from boxsdk import JWTAuth
 from boxsdk.exception import BoxAPIException
 from boxsdk.object.events import EnterpriseEventsStreamType
 from boxsdk.object.collaboration import CollaborationRole
+from models.logger import Logger
+from concurrent.futures import ThreadPoolExecutor
 import os
 import json
 import logging 
-from models.logger import Logger
-from concurrent.futures import ThreadPoolExecutor
+import random
+import boto3
+
 class BoxAPI(Logger):
     def __init__(self, config_path, admin_id):
         """
@@ -189,6 +192,196 @@ class BoxAPI(Logger):
 
         return file_versions
 
+
+    def upload_file(self, folder_id, file_path, file_name, as_user_object):
+        """
+        Uploads a file to the specified Box folder.
+
+        Args:
+        - folder_id (str): The ID of the Box folder to upload the file to.
+        - file_path (str): The local file path of the file to upload.
+        - file_name (str): The name to give to the uploaded file in Box.
+        - user_client (boxsdk.Client): A Box API client instance authenticated as a user with access to the specified folder.
+
+        Returns:
+        - file (boxsdk.object.file.File): A Box file object representing the newly uploaded file.
+        """
+        app_user = self.sa_client.user(user_id=as_user_object.id)
+        app_user_client = self.sa_client.as_user(app_user)
+        folder = app_user_client.folder(folder_id)
+    
+        try:
+            uploaded_file = folder.upload(file_path, file_name)
+            self.logger.info(f'File "{file_name}" (ID:{uploaded_file.id}) uploaded to folder "{uploaded_file.parent.name}" (ID:{uploaded_file.parent.id}) by user {as_user_object.name} (ID:{as_user_object.id}).')
+            return uploaded_file
+        except BoxAPIException as e:
+            self.logger.warning(f'Error uploading file to folder {folder_id}. Error message: {e}')
+            return None
+        
+
+    def random_string(self, length=5):
+        import string
+        """
+        Generates a random string of the specified length.
+
+        Args:
+        - length (int, optional): The length of the string to generate. Defaults to 5.
+
+        Returns:
+        - random_string (str): The randomly generated string.
+        """
+        letters = string.ascii_lowercase
+        return ''.join(random.choice(letters) for i in range(length))
+
+    def upload_files_with_threads(self, folder_id, file_paths, as_user_objects, num_threads=4):
+        """
+        Uploads multiple files to the specified Box folder, using multiple threads to improve performance.
+
+        Args:
+        - folder_id (str): The ID of the Box folder to upload the files to.
+        - file_paths (list of str): The local file paths of the files to upload.
+        - as_user_objects (list of boxsdk.object.user.User): A list of Box user objects representing the users to upload the files as.
+        - num_threads (int, optional): The number of threads to use for file upload. Defaults to 4.
+
+        Returns:
+        - None
+        """
+        # Initialize ThreadPoolExecutor with specified number of threads
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+
+            # Submit upload_file() function for each file to executor
+            for i, file_path in enumerate(file_paths):
+                file_name = f'sample_file_{i}_{self.random_string()} - 2023-04-24_06:20:10AM.txt.txt'
+                as_user_object = random.choice(as_user_objects)
+                executor.submit(self.upload_file, folder_id, file_path, file_name, as_user_object)
+
+        self.logger.info(f'{len(file_paths)} files uploaded to folder {folder_id} using {num_threads} threads.')
+    
+
+    def delete_file(self, file_id):
+        """
+        Deletes the file with the given file ID.
+
+        Args:
+        - file_id (str): The ID of the file to delete.
+
+        Returns:
+        - None
+        """
+        file = self.sa_client.file(file_id=file_id).delete()
+        self.logger.info(f'File "{file.name}" (ID: {file_id}) deleted.')
+        
+    def delete_files_with_threads(self, file_ids, num_threads=4):
+        """
+        Deletes multiple files with multiple threads.
+
+        Args:
+        - file_ids (list of str): The IDs of the files to delete.
+        - num_threads (int, optional): The number of threads to use for file deletion. Defaults to 4.
+
+        Returns:
+        - None
+        """
+        # Initialize ThreadPoolExecutor with specified number of threads
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+
+            # Submit delete_file() function for each file to executor
+            for file_id in file_ids:
+                executor.submit(self.delete_file, file_id)
+
+        self.logger.info(f'{len(file_ids)} files deleted using {num_threads} threads.')
+
+    def upload_file_with_lambda(self, session, folder_id, file_path, file_name, lambda_function_name):
+        """
+        Uploads a single file to the specified Box folder by invoking an AWS Lambda function.
+
+        Args:
+        - folder_id (str): The ID of the Box folder to upload the file to.
+        - file_path (str): The local file path of the file to upload.
+        - file_name (str): The name of the file to upload.
+        - lambda_function_name (str): The name of the AWS Lambda function to invoke for file upload.
+
+        Returns:
+        - None
+        """
+        # Create a Boto3 Lambda client
+        session = boto3.Session(
+            aws_access_key_id='AKIA26ZJD2CNBRTIIM6I',
+            aws_secret_access_key='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'
+        )
+        lambda_client = session.client('lambda',region_name='us-east-1')
+
+        # Invoke the Lambda function for the file
+        payload = {
+            'folder_id': folder_id,
+            'file_path': file_path,
+            'file_name': file_name
+        }
+        res = lambda_client.invoke_async(FunctionName=lambda_function_name, InvokeArgs=json.dumps(payload))
+        self.logger.info(res)
+        print(res)
+        self.logger.info(f'File "{file_name}" sent to Lambda function "{lambda_function_name}" for upload.')
+
+    def upload_files_with_lambda_threaded(self, folder_id, file_paths, lambda_function_name, num_threads=4):
+        """
+        Uploads multiple files to the specified Box folder, using multiple threads to invoke an AWS Lambda function for each file.
+
+        Args:
+        - folder_id (str): The ID of the Box folder to upload the files to.
+        - file_paths (list of str): The local file paths of the files to upload.
+        - lambda_function_name (str): The name of the AWS Lambda function to invoke for file upload.
+        - num_threads (int, optional): The number of threads to use for file upload. Defaults to 4.
+
+        Returns:
+        - None
+        """
+        session = boto3.Session(
+            aws_access_key_id='AKIA26ZJD2CNBRTIIM6I',
+            aws_secret_access_key='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'
+        )
+        # Initialize ThreadPoolExecutor with specified number of threads
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+
+            # Submit upload_file_with_lambda() function for each file to executor
+            for file_path in file_paths:
+                file_name = f'sample_file_{self.random_string()} - 2023-04-24_06:20:10AM.txt'
+                executor.submit(self.upload_file_with_lambda, session, folder_id, file_path, file_name, lambda_function_name)
+
+        self.logger.info(f'{len(file_paths)} files uploaded to folder {folder_id} via AWS Lambda function using {num_threads} threads.')
+    
+    def upload_files_with_lambda(self, folder_id, file_paths, lambda_function_name):
+        """
+        Uploads multiple files to the specified Box folder by invoking an AWS Lambda function for each file.
+
+        Args:
+        - folder_id (str): The ID of the Box folder to upload the files to.
+        - file_paths (list of str): The local file paths of the files to upload.
+        - lambda_function_name (str): The name of the AWS Lambda function to invoke for file upload.
+
+        Returns:
+        - None
+        """
+
+        # Create a Boto3 Lambda client
+        session = boto3.Session(
+            aws_access_key_id='AKIA26ZJD2CNBRTIIM6I',
+            aws_secret_access_key='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'
+        )
+        lambda_client = session.client('lambda',region_name='us-east-1')
+
+        # Loop through the file paths and invoke the Lambda function for each file asynchronously
+        for file_path in file_paths:
+            file_name = f'sample_file_{self.random_string()} - 2023-04-24_06:20:10AM.txt'
+            payload = {
+                'folder_id': folder_id,
+                'file_path': file_path,
+                'file_name': file_name
+            }
+            lambda_client.invoke_async(FunctionName=lambda_function_name, InvokeArgs=json.dumps(payload))
+            self.logger.info(f'File "{file_name}" sent to Lambda function "{lambda_function_name}" for upload.')
+        
+        self.logger.info(f'{len(file_paths)} files uploaded to folder {folder_id} via AWS Lambda function.')
+    
     def restore_file(self, file_id, user_client):
         """
         Restores a deleted Box file.
@@ -257,7 +450,7 @@ class BoxAPI(Logger):
 
         self.logger.info(f'{num_users} users with prefix "{prefix}" created.')
 
-        return self.sa_client.users(filter_term=prefix)
+        return list(self.sa_client.users(filter_term=prefix))
 
     def delete_user(self, user):
         """
@@ -403,6 +596,7 @@ class BoxAPI(Logger):
             'editor': CollaborationRole.EDITOR,
             'previewer': CollaborationRole.PREVIEWER,
             'uploader': CollaborationRole.UPLOADER,
+            'co-owner':CollaborationRole.CO_OWNER
         }
         if role not in role_mapping:
             raise ValueError(f"Invalid role '{role}'. Must be one of 'viewer', 'editor', 'previewer', or 'uploader'.")
