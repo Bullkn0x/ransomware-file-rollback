@@ -64,16 +64,11 @@ This will start the app on `localhost:5000`. From here, you can interact with th
 
 
 
-
-
 ## Features
 - Bulk Upload files to Box (via Box Drive and API)
 - Bulk edit file contents
 - Re-uploads files with file contents encrypted
 - Roll back files to a previous version
-
-## Contributing
-We welcome contributions from the community! If you find a bug or have an idea for a new feature, please submit an issue or open a pull request.
 
 ## License
 The Ransomware File Rollback Tool is licensed under the [MIT License](https://github.com/Bullkn0x/ransomware-file-rollback/blob/main/LICENSE).
