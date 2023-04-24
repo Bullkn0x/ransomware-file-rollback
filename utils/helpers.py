@@ -56,5 +56,5 @@ def get_date_string(date_object):
 def generate_key():
     key = Fernet.generate_key()
     with open(".env", "a") as f:
-        f.write(f'\nSECRET_KEY="{key.decode("utf-8")}"')
+        f.write(f'ENCRYPTION_SECRET_KEY="{key.decode("utf-8")}"')
     return key

@@ -3,6 +3,7 @@ logs/
 outputs/
 test_files/
 config.json
+*.pem
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

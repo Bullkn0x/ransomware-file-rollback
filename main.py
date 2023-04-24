@@ -14,7 +14,8 @@ from boxsdk.exception import BoxAPIException
 import rfc3339      # for date object -> date string
 import iso8601      # for date string -> date object
 import colored
-
+import time
+from create import initiate_cli
 # Load environment variables
 load_dotenv()
 config_path = os.getenv('config_file_path')   # Path to the Box API config file
@@ -23,7 +24,7 @@ EVENT_TYPES_TO_QUERY = ['UPLOAD','EDIT','DELETE','UNDELETE','MOVE']  # Box event
 USER_TO_QUERY = os.getenv('user_to_query')     # User email to filter events
 START_TIME_WINDOW = os.getenv('start_window')  # Start time window to query events
 END_TIME_WINDOW = os.getenv('end_window')      # End time window to query events
-
+BOX_SAMPLE_FOLDER_ID = os.getenv('BOX_SAMPLE_FOLDER_ID')
 def main():
     """
     Retrieves and processes events from the Box API event stream, gathering all previous
@@ -32,15 +33,31 @@ def main():
     promoting the version just prior, the file is restored to its intended state.
     """
     
-
+    # initiate_cli()
+    
     # Create Box API client
     box_api = BoxAPI(config_path, admin_id)
 
     # Initiailize a user client for performing various file related tasks 
     user = box_api.sa_client.user().get()
     admin_user = box_api.sa_client.user(user_id=admin_id)
-    user_client = box_api.sa_client.as_user(admin_user)
+    admin_client = box_api.sa_client.as_user(admin_user)
 
+
+    #create app users for handling large workloads
+    app_users= box_api.create_users_with_threads('ransomasdfware',10,10)
+    app_user_group = box_api.create_group('ransom_app_user_group')
+    time.sleep(3)
+    box_api.add_users_to_group_with_threads(app_users, app_user_group, admin_client)
+    box_api.add_group_collaboration(BOX_SAMPLE_FOLDER_ID, app_user_group,'editor',admin_client)
+    box_api.delete_users_with_threads('ransomasdfware',20)
+    exit()
+
+ 
+    exit()
+
+
+    
     # Get events from Box API Event Stream
     events = box_api.get_admin_events(START_TIME_WINDOW, END_TIME_WINDOW,EVENT_TYPES_TO_QUERY)
     
@@ -58,7 +75,8 @@ def main():
 
     # Get file versions for the filtered files
     user_files_with_versions= box_api.batch_get_file_versions(file_dict.items(), user_client)
-   
+    write_json_file('outputs/user_file_events.json', user_files_with_versions)   
+    
 
 
 if __name__ == "__main__":

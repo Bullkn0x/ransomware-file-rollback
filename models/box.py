@@ -2,11 +2,12 @@ from boxsdk import Client
 from boxsdk import JWTAuth
 from boxsdk.exception import BoxAPIException
 from boxsdk.object.events import EnterpriseEventsStreamType
+from boxsdk.object.collaboration import CollaborationRole
 import os
 import json
 import logging 
 from models.logger import Logger
-
+from concurrent.futures import ThreadPoolExecutor
 class BoxAPI(Logger):
     def __init__(self, config_path, admin_id):
         """
@@ -55,6 +56,8 @@ class BoxAPI(Logger):
         # Create Box API client
         sa_client = Client(auth)
         return sa_client
+
+
 
     def load_config(self, file_path):
         with open(file_path) as file:
@@ -168,14 +171,7 @@ class BoxAPI(Logger):
                 finally:
                     if not restored_file:
                         continue
-                    
-                item_details[item_id]['restored_file_id'] = restored_file.id
-             
-                if 'restored_file_id' in item_details:
-                    item_details['file_id'] = item_details['restored_file_id']
-                    print(f'item id:{item_id} restored_file_id {restored_file.id }')
-               
-
+         
             # Get the previous versions of the file
             try:
                 item_id = item_details['file_id']
@@ -220,9 +216,215 @@ class BoxAPI(Logger):
         return restored_file
         
 
+    def create_user(self, name):
+        """
+        Creates a new Box user with the specified name.
+
+        Args:
+        - name (str): The name to use for the new Box user.
+
+        Returns:
+        - None
+        """
+
+        try:
+            user = self.sa_client.create_user(name,login=None)
+            self.logger.info(f'User {name} created with ID {user.id}.')
+        except BoxAPIException as e:
+            self.error_logger.error(f'Error creating user {name}. Error message: {e}')
+            pass
+
+    def create_users_with_threads(self, prefix, num_users, num_threads=4):
+        """
+        Creates multiple new Box users with the specified name prefix and number, using multithreading to improve performance.
+
+        Args:
+        - prefix (str): The prefix to use for the new Box users.
+        - num_users (int): The number of new Box users to create.
+        - num_threads (int, optional): The number of threads to use for user creation. Defaults to 4.
+
+        Returns:
+        - A list of dictionaries containing the IDs and names of the newly created Box users.
+        """
+
+        # Initialize ThreadPoolExecutor with specified number of threads
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+
+            # Submit create_user() function for each new user to executor
+            for i in range(1, num_users+1):
+                username = f"{prefix}{i}"
+                executor.submit(self.create_user, username)
+
+        self.logger.info(f'{num_users} users with prefix "{prefix}" created.')
+
+        return self.sa_client.users(filter_term=prefix)
+
+    def delete_user(self, user):
+        """
+        Deletes the Box user with the specified ID.
+
+        Args:
+        - user_id (str): The ID of the Box user to delete.
+
+        Returns:
+        - None
+        """
+
+        try:
+            self.sa_client.user(user.id).delete(force=True)
+            self.logger.info(f'User "{user.name}"(ID:{user.id}) deleted.')
+        except BoxAPIException as e:
+            self.error_logger.error(f'Error deleting user User "{user.name}"(ID:{user.id}). Error message: {e}')
+            pass
+
+    def delete_users_with_threads(self, prefix, num_threads=4):
+        """
+        Deletes all Box users with the specified name prefix, using multithreading to improve performance.
+
+        Args:
+        - prefix (str): The prefix used for the Box users to be deleted.
+        - num_threads (int, optional): The number of threads to use for user deletion. Defaults to 4.
+
+        Returns:
+        - None
+        """
+
+        # Get all users with the specified prefix
+        users_to_delete = []
+        for user in self.sa_client.users(filter_term=prefix):
+            users_to_delete.append(user)
+
+        # Initialize ThreadPoolExecutor with specified number of threads
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+
+            # Submit delete_user() function for each user to executor
+            for user in users_to_delete:
+                executor.submit(self.delete_user, user)
+
+        self.logger.info(f'{len(users_to_delete)} users with prefix "{prefix}" deleted.')
 
     
 
+    def create_group(self, group_name):
+        """
+        Creates a new Box group with the specified name.
+
+        Args:
+        - group_name (str): The name to use for the new Box group.
+
+        Returns:
+        - group_id (str): The ID of the newly created or existing Box group.
+        """
+
+        try:
+            new_group = self.sa_client.create_group(group_name)
+            self.logger.info(f'Group {group_name} created with ID {new_group.id}.')
+            group =new_group
+        except BoxAPIException as e:
+            if e.status == 409:
+                # If the group already exists, get the existing group's ID and return it
+                existing_group = self.sa_client.get_groups(group_name)
+                if existing_group:
+                    group = list(existing_group)[0]
+                    self.logger.warning(f'Group "{group.name}" already exists with ID {group.id}.')
+                    return group
+                else:
+                    group = None
+                    self.error_logger.error(f'Error retrieving existing group {group_name}. Error message: {e}')
+            else:
+                group = None
+                self.error_logger.error(f'Error creating group {group_name}. Error message: {e}')
+        return group
+
+
+    def add_user_to_group(self, user, group, user_client):
+        """
+        Adds a Box user to a specified group.
+
+        Args:
+        - user (boxsdk.object.user.User): The Box user to add to the group.
+        - group_id (str): The ID of the Box group to add the user to.
+
+        Returns:
+        - None
+        """
+
+        try:
+            group_membership = user_client.group(group_id=group.id).add_member(user)
+            self.logger.info(f'User "{user.name}"(ID:{user.id}) added to group "{group.name}"(ID:{group.id}).')
+        except BoxAPIException as e:
+            self.error_logger.error(f'Error adding user {user.name} to group. Error message: {e}')
+            pass
+
+
+    def add_users_to_group_with_threads(self, users, group, user_client, num_threads= 4):
+        """
+        Adds multiple Box users to a specified group using multithreading.
+
+        Args:
+        - users (List[boxsdk.object.user.User]): A list of Box users to add to the group.
+        - group_id (str): The ID of the Box group to add the users to.
+        - num_threads (int, optional): The number of threads to use for adding users to the group. Defaults to 4.
+
+        Returns:
+        - None
+        """
+        users_added = 0
+        # Initialize ThreadPoolExecutor with specified number of threads
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+
+            # Submit add_user_to_group() function for each user to executor
+            for user in users:
+                executor.submit(self.add_user_to_group, user, group, user_client)
+                users_added+=1
+
+        self.logger.info(f'{users_added} users added to group "{group.name}"(ID:{group.id})".')
+
+    def add_group_collaboration(self, folder_id, group, role: str, user_client):
+        """
+        Adds a collaboration between the specified Box folder and group.
+
+        Args:
+        - folder_id (str): The ID of the Box folder to collaborate.
+        - group_id (str): The ID of the Box group to collaborate.
+        - role (str): The role of the collaborator. Must be one of 'viewer', 'editor', 'previewer', or 'uploader'.
+        - user_client (boxsdk.Client): A Box API client instance authenticated as a user with access to the specified folder.
+
+        Returns:
+        - collaboration (boxsdk.object.collaboration.Collaboration): A Box collaboration object representing the newly created collaboration.
+
+        Raises:
+        - ValueError: If the specified role is not one of 'viewer', 'editor', 'previewer', or 'uploader'.
+        """
+        
+        # Map role string to CollaborationRole attribute
+        role_mapping = {
+            'viewer': CollaborationRole.VIEWER,
+            'editor': CollaborationRole.EDITOR,
+            'previewer': CollaborationRole.PREVIEWER,
+            'uploader': CollaborationRole.UPLOADER,
+        }
+        if role not in role_mapping:
+            raise ValueError(f"Invalid role '{role}'. Must be one of 'viewer', 'editor', 'previewer', or 'uploader'.")
+
+        try:
+            # Create the collaboration
+            collaboration = user_client.folder(folder_id).collaborate(group, role_mapping[role])
+
+            # Log the collaboration details
+            collaborator = collaboration.accessible_by
+            item = collaboration.item
+            has_accepted = 'has' if collaboration.status == 'accepted' else 'has not'
+            self.logger.info(f'"{collaborator.name}"(ID:{collaborator.id}) {has_accepted} accepted the collaboration to folder "{item.name}(ID:{item.id})"')
+            
+            return collaboration
+        except BoxAPIException as e:
+            if e.status == 409:
+                self.logger.warning(f'Group "{group.name}"(ID:{group.id}) is already a collaborator for folder(ID: {folder_id})')
+            else:
+                self.logger.error(f'Error adding group(ID: {group.id}) as a collaborator for folder(ID: {folder_id}) with role {role}. Error message: {e}')
+            return None
+    
     ##### THIS NEEDS TO BE CLEANED UP
     def promote_closest_version(self, file_id, ransomware_start_date):
         """
