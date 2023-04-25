@@ -58,14 +58,14 @@ The tool also has a command-line wizard that will guide you through the steps to
 
 ```python run.py```
 
-[![filewizard](https://im2.ezgif.com/tmp/ezgif-2-436315e1af.gif)
+![filewizard](https://im2.ezgif.com/tmp/ezgif-2-436315e1af.gif)
 
 This will start the wizard, which will guide walk you through staging your test environment and executing a file rollback.
 
 
 ### Flask App GUI
 
-[![webapp](https://i.imgur.com/4Dh2Hru.png)
+![webapp](https://i.imgur.com/4Dh2Hru.png)
 
 The tool can be run through a GUI in a Flask app. To start the Flask app, run:
 `python run.py --web`
