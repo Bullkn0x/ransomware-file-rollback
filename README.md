@@ -65,8 +65,8 @@ This will start the wizard, which will guide walk you through staging your test 
 
 ### Flask App GUI
 
-The tool can be run through a GUI in a Flask app, which is associated with the `templates` and `static` folders. To start the Flask app, run:
-`python web/app.py`
+The tool can be run through a GUI in a Flask app. To start the Flask app, run:
+`python run.py --web`
 
 
 This will start the app on `localhost:5000`. From here, you can interact with the app through a web browser.
@@ -78,7 +78,7 @@ This will start the app on `localhost:5000`. From here, you can interact with th
 ## Features
 - Bulk Upload files to Box (via Box Drive and API)
 - Bulk edit file contents
-- Re-uploads files with file contents encrypted
+- Reupload files with file contents encrypted
 - Roll back files to a previous version
 
 
