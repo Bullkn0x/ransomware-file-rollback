@@ -10,7 +10,6 @@ import json
 import os
 from dotenv import load_dotenv
 from json import JSONEncoder
-from boxsdk.exception import BoxAPIException
 import rfc3339      # for date object -> date string
 import iso8601      # for date string -> date object
 import colored
