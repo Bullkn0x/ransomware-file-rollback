@@ -65,6 +65,8 @@ This will start the wizard, which will guide walk you through staging your test 
 
 ### Flask App GUI
 
+[![webapp](https://i.imgur.com/4Dh2Hru.png)
+
 The tool can be run through a GUI in a Flask app. To start the Flask app, run:
 `python run.py --web`
 
