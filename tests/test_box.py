@@ -1,7 +1,5 @@
 import pytest
-from boxsdk import Client
-from boxsdk.exception import BoxAPIException
-from models.box import BoxAPI
+from src.models.box import BoxAPI, Client
 from dotenv import load_dotenv
 import os
 
