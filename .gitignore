@@ -1,5 +1,6 @@
 # project adds
 logs/
+.DS_Store
 outputs/
 test_files/
 config.json
