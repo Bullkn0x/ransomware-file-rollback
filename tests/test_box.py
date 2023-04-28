@@ -1,5 +1,5 @@
 import pytest
-from src.models.box import BoxAPI, Client
+from rollback.models.box import BoxAPI, Client
 from dotenv import load_dotenv
 import os
 

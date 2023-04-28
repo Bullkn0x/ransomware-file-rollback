@@ -1,7 +1,7 @@
-from .models.box import BoxAPI
-from .models.logger import Logger
-from .utils.helpers import write_json_file, read_json_file, get_date_object, get_date_string,get_sample_directory_file_paths, get_cli_args, process_args
-from .utils.box_helpers import filter_user_events, get_event_type
+from rollback.models.box import BoxAPI
+from rollback.models.logger import Logger
+from rollback.utils.helpers import write_json_file, read_json_file, get_date_object, get_date_string,get_sample_directory_file_paths, get_cli_args, process_args
+from rollback.utils.box_helpers import filter_user_events, get_event_type
 from web.app import app, socketio
 import json 
 from datetime import datetime, timezone
