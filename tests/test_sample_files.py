@@ -1,7 +1,7 @@
 import os
 import pytest
-from src.create import create_sample_files, update_sample_files
-from src.utils.helpers import get_cli_args
+from rollback.create import create_sample_files, update_sample_files
+from rollback.utils.helpers import get_cli_args
 import argparse
 from unittest import mock
 @pytest.fixture
