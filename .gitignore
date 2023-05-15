@@ -5,6 +5,7 @@ outputs/
 test_files/
 config.json
 *.pem
+web/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
