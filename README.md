@@ -81,6 +81,7 @@ This will start the app on `localhost:5000`. From here, you can interact with th
 - Bulk Upload files to Box (via Box Drive and API)
 - Bulk edit file contents
 - Reupload files with file contents encrypted
+- Pull Event Stream events with filters
 - Roll back files to a previous version
 
 
